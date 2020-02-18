@@ -1,0 +1,471 @@
+---
+title: 'BDA Coursework 1'
+subtitle: 'MSc Data Science'
+author: 'Mark Rotchell, 13181875'
+output: pdf_document
+geometry: margin=2cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+```
+
+# 1. Statistical Learning Methods
+\vspace{12pt}
+
+## 1.a)  Large p, small n
+
+**Flexible method worse.** Increasing flexibility increases the likelihood of overfitting. This problem is exacerbated when there are few observations. The likelihood of one or more predictors with no relationship to the dependent variable passing tests of significance by coincidence increases as the number of predictors increases and the number of observations decreases.  Flexible methods also tend to produce less interpretable results.
+
+\vspace{12pt}
+
+## 1.b) Small p, large n
+**Flexible method better.** Increasing the number of observations increases confidence that a model reflects the underlying relationship, rather than random noise. In particular, the average contribution of irreducible error to the dependent variable tends to zero with increasing sample size. This confidence allows for searching a wider gamut of potential parametrisations without fear of overfitting. Having fewer predictors reduces the likelihood of finding, and subsequently including, predictors which correlate with the random errors by sheer chance. That said, if interpretability were the goal, rather than predictive accuracy, then a less flexible method may be more appropriate.
+
+\vspace{12pt}
+
+## 1.c) Highly non-linear relationship
+**Flexible method better.** Non-linear relationships require more parameters to describe. Such models would generally require a more flexible learning method in order to be found, though a big sample size would be required to provide high predictive accuracy. Again, a more flexible method may prove less interpretable than a simpler method.
+
+\vspace{12pt}
+
+## 1.d) High error-term standard deviation
+**Flexible method worse.** The more of each observation that can be attributed to random error, the more likely it is that over-fitting will occur. Flexible methods are more prone to overfitting, so are best avoided in this instance unless the sample size is also extremely large. A simpler method has the added benefit of being more interpretable.
+
+\pagebreak
+
+# 2. Bayes' Rule
+
+```{r Bayes Rule}
+Temperature =  c('hot', 'hot', 'hot', 'cool', 'hot', 'hot', 'cool', 'cool', 'cool', 'hot',
+                 'cool', 'hot', 'hot', 'hot', 'cool', 'cool', 'hot', 'cool', 'hot', 'hot')
+Play_Golf = c('no', 'no', 'yes', 'no', 'no', 'no', 'yes', 'no', 'no', 'yes',
+              'yes', 'yes', 'yes', 'no', 'yes', 'yes', 'no', 'yes', 'no', 'yes')
+knitr::kable(addmargins(table(paste('Temperature = ',Temperature), 
+                              paste('Play Golf = ',Play_Golf))))
+```
+
+\vspace{12pt}
+
+P(Play Golf = yes) = 10 /  20 = 0.5
+
+P(Play Golf = no) = 10 / 20 = 0.5
+
+P(Temperature = hot) = 12 / 20 = 0.6
+
+P(Temperature = cool) = 8 / 20 = 0.4
+
+
+P(Temperature = hot | Play Golf = yes) = 5 / 10 = 0.5
+
+P(Temperature = cool | Play Golf = yes) = 5 / 10 = 0.5
+
+P(Temperature = hot | Play Golf = no) = 7 / 10 = 0.7
+
+P(Temperature = cool | Play Golf = no) = 3 / 10 = 0.3
+
+\vspace{12pt}
+
+#### So, via Bayes rule:
+
+P(Play Golf = yes | Temperature = hot) = (0.5 × 0.5) / 0.6 = $\dfrac{5}{12}$  = 0.41666...
+
+P(Play Golf = no | Temperature = hot) = (0.7 × 0.5) / 0.6 = $\dfrac{7}{12}$  = 0.58333...
+
+P(Play Golf = yes | Temperature = cool) = (0.5 × 0.5) / 0.4 = $\dfrac{5}{8}$ = 0.625
+
+P(Play Golf = no | Temperature = cool) = (0.3 × 0.5) / 0.4 = $\dfrac{3}{8}$ = 0.375
+
+\pagebreak
+
+# 3. Descriptive Analysis
+```{r Descriptive Analysis Auto Summary}
+library(ISLR)
+head(Auto)
+summary(Auto[,-which(names(Auto)=='name')])
+```
+
+## 3.a) Which predictors are quantitative and which qualitative
+* `mpg`, `cylinders`, `displacement`, `horsepower`, `weight` and `acceleration` are all quantitative
+* `year` is numerical but ordinal (addition does not make sense) so is qualitative
+* `origin` is numerical but the numbers are presumably arbitrary category labels, so is qualitative
+* `name` is clearly qualitative
+
+## 3.b) Range of quantitative predictors
+```{r Range of Quantitative Predictors}
+range_table <-function(data_set){
+  r = data.frame(max = sapply(data_set,max), min = sapply(data_set,min))
+  r$range = r$max - r$min
+  return(r)
+}
+quants = c('mpg', 'cylinders', 'displacement', 'horsepower', 'weight', 'acceleration')
+```
+\pagebreak
+```{r Range of Quantitative Predictors table}
+knitr::kable(range_table(Auto[,quants]))
+```
+
+## 3.c) Median and variance of quantitative preditors
+```{r Median and Varianace of quantitative predictors}
+var_med_table <-function(data_set){
+  r = data.frame(variance = sapply(data_set,var), median=sapply(data_set,median))
+  return(r)
+}
+knitr::kable(var_med_table(Auto[,quants]))
+```
+
+## 3.d) With observations removed
+```{r With Removed Observations}
+AutoSubset = Auto[-(11:79),]
+knitr::kable(data.frame(range_table(AutoSubset[,quants]),
+                        var_med_table(AutoSubset[,quants])))
+```
+
+\pagebreak
+## 3.e) Graphical Exploration
+```{r Pairs, fig.width=8, fig.height=7}
+conts = c('mpg','displacement','horsepower','weight','acceleration')
+pairs(Auto[,conts], col="darkgreen", cex=0.3, 
+      main = 'Scatter plots of continuous variables')
+```
+
+There are clearly strong relationships among the continuous predictors. `Displacement`, `horsepower` and `weight` look to have strong, positive nearly-linear relationships with each other and a negative, non-linear relationship with `mpg`. `Acceleration` is the least related to the other variables, but does have a slight positive relationship with `mpg` and a negative relationship with `displacement`, `horsepower` and `weight`.
+
+\vspace{12pt}
+
+```{r Boxplots, fig.width=8, fig.height=7}
+
+discs = c('year','cylinders','origin')
+y = c(0,0.2,0.4,0.6,0.8,1)
+x = c(0,0.6,0.83,1)
+
+for (j in 1:3){
+  for (i in 1:5){
+    par(fig=c(x[j],x[j+1],y[i],y[i+1]), new=!(i==1 & j==1), mar=rep(0.3,4),oma=c(3,3,2,0))
+    boxplot(Auto[,conts[i]]~Auto[,discs[j]], ylab='', xlab='', border='dark red',
+            xaxt=if(i==1) "s" else "n", yaxt=if(j==1) "s" else "n")
+  }
+}
+mtext('Box Plots of Categorical vs Continuous Variables', side=3, outer = TRUE, line=0.3, font=2)
+mtext(discs, side=1, outer = TRUE, line=2, at=c(0.3,0.715,0.915))
+mtext(conts, side = 2, outer = TRUE, line=2, at = seq(0.1, 0.9, by = 0.2))
+```
+
+\vspace{12pt}
+
+`Acceleration` and `mpg` tend to increase with `year`, whilst `weight`, `horsepower` and `displacement` tend to reduce with `year.` `Mpg` and `acceleration` tend to be best for cars with 4-5 `cylinders` and from `origin` 3. `Displacement`, `horsepower`, and `weight` tend to increase with more `cylinders`, and in `origin` 1.
+
+## 3.f) Useful variables in predicting mpg
+The scatter plots suggest `mpg` has a strong, negatively-correlated relationship with `displacement`, `horsepower` and `weight`, however these relationships are not perfectly linear. `Acceleration` does not appear to have a strong relationship with `mpg`, but there is a small positive correlation. There does seems to be a strong relationship with the categorical variables - `year`, `cylinders` and `origin` - in particular we see very different values depending on `origin`. All of these predictor variables would seem to be useful in a regression or other prediction of `mpg`.
+
+
+\pagebreak
+
+# 4. Linear Regression
+## 4.a) Regress mpg on horsepower
+```{r Linear Model}
+model = lm(mpg~horsepower,Auto)
+summary(model)
+```
+
+### 4.a.i) Is there a relationship?
+The low p-value for horsepower suggests we can reject the null hypothesis that there is no relationship - i.e. we can have reasonable confidence in the existence of a relationship.
+
+### 4.a.ii) How strong is the relationship?
+The R-squared value is 60.6%, suggesting that 60.6% of the variability in the mpg can be explained by a linear relationship with horsepower.
+
+### 4.a.iii) Is the relationship positive or negative
+The estimate of the slope of the relationship is -0.16, so as horsepower increases, mpg decreases - i.e. a negative relationship.
+
+### 4.a.iv) Prediction for horsepower of 89
+```{r Linear Regression Prediction}
+predict(model,data.frame(horsepower=89),interval='confidence', level = 0.99)
+predict(model,data.frame(horsepower=89),interval='prediction', level = 0.99)
+```
+\vspace{12pt}
+The predicted mpg is 25.88768 with a 99% confidence interval between 25.19633 and 26.57903, and a 99% prediction interval between 13.17035 and 38.60501.
+
+\pagebreak
+
+## 4.b) Plot of response, predictor and regression line
+```{r Linear Regression plot, fig.width=8, fig.height=7.2}
+plot(mpg~horsepower,data=Auto, xlab='horsepower',ylab='mpg', xlim=c(25,250), ylim=c(5,50), 
+     pch=3, main = 'Linear Regression of mpg onto horsepower')
+abline(model, col='dark green', lwd=2)
+legend(x ="topright", col=c("black","dark green"), legend = c('Data','Regression'),
+       lty=c(0,1), lwd=c(1,2), pch=c(3,NA))
+```
+
+## 4.c) Plot of confidence intervals and prediction intervals
+
+```{r Linear Regression intervals, fig.width=8, fig.height=7.2}
+plot(Auto$horsepower, Auto$mpg, xlab='horsepower', ylab='mpg', pch=3, 
+     xlim=c(25,250), ylim=c(5,50), new=TRUE, main='Confidence and Prediction Intervals')
+
+abline(model, col='dark green', lwd=2)
+
+new_horsepower = data.frame(horsepower=seq(0,300,length=20))
+
+ivals_conf = predict(model,new_horsepower,interval='confidence', level=0.99)
+ivals_pred = predict(model,new_horsepower,interval='prediction', level=0.99)
+
+lines(new_horsepower$horsepower,ivals_conf[,"lwr"], col="red", type="b", pch=1)
+lines(new_horsepower$horsepower,ivals_conf[,"upr"], col="red", type="b", pch=1)
+lines(new_horsepower$horsepower,ivals_pred[,"lwr"], col="blue", type="b", pch=5)
+lines(new_horsepower$horsepower,ivals_pred[,"upr"], col="blue", type="b", pch=5)
+
+legend(x ="topright", col=c("black","dark green","red", "blue"),
+       legend = c('Data','Regression','99% Confidence Interval','99% Prediction Interval'),
+       lty=c(0,1,1,1), lwd=c(1,2,1,1), pch=c(3,NA,1,5))
+```
+
+\pagebreak
+
+# 5. Logistic Regression
+
+## 5.a) Load data and display stats about training set
+```{r Logistic Data Set Summary}
+train = read.csv("Training_set for Q5.txt")
+test =  read.csv("Testing_set for Q5.txt")
+
+#Number of rows in the training set
+nrow(train)
+
+#Quick Summary of fields
+kable(summary(train),align=rep('r',6))
+
+#Standard Deviations
+kable(sapply(train,sd), col.names = 'Standard Deviation')
+
+#Correlations
+kable(cor(train),digits=3)
+```
+
+\pagebreak
+
+#### Set up some reusable functions to reduce code duplication
+```{r confusion and accuracy  printing}
+#Print out confusion matris
+print_confusion_matrix <- function(model, test_data, test_actual){
+  probs = predict(model,newdata=test_data,type='response')
+  preds = rep(0,nrow(test_data))
+  preds[probs>=0.5] = 1
+  addmargins(table(prediction=preds,actual=test_actual))
+}
+#Print out various accuracy measures
+print_accuracy_rates <- function(model, test_data, test_actual){
+  probs = predict(model,newdata=test_data,type='response')
+  preds = rep(0,nrow(test_data))
+  preds[probs>=0.5] = 1 
+  accuracy = data.frame(
+    Accuracy_Rate = mean(preds == test_actual),
+    Error_Rate = mean(preds != test_actual),
+    True_Positive_Rate = sum(preds==1 & test_actual==1) / sum(test_actual==1),
+    False_Positive_Rate = sum(preds==1 & test_actual==0) / sum(test_actual==0),
+    True_Negative_Rate = sum(preds==0 & test_actual==0) / sum(test_actual==0),
+    False_Negative_Rate = sum(preds==0 & test_actual==1) / sum(test_actual==1),
+    row.names = 'Rate')
+  kable(t(accuracy))
+}
+```
+\pagebreak
+## 5.b) - Regress Occupancy on Temperature
+
+```{r Regress Occupancy on Temperature}
+# Build Model
+model_1 = glm(Occupancy~Temperature, data=train, family=binomial)
+
+# Model Summary
+summary(model_1)
+
+#Confusion Matrix
+print_confusion_matrix(model_1, test, test$Occupancy)
+
+#Predictive Accuracy
+print_accuracy_rates(model_1, test, test$Occupancy)
+```
+
+\pagebreak
+
+## 5.c) - Regress Occupancy on Humidity
+```{r Regress Occupancy on Humidity}
+# Build Model
+model_2 = glm(Occupancy~Humidity, data=train, family=binomial)
+
+# Model Summary
+summary(model_2)
+
+# Confusion Matrix
+print_confusion_matrix(model_2, test, test$Occupancy)
+
+# Accuracy Rates
+print_accuracy_rates(model_2, test, test$Occupancy)
+```
+
+\pagebreak
+
+
+### 5.d) - Regress Occupancy on All Features
+```{r Regress Occupancy on All Features}
+# Build Model
+model_3 = glm(Occupancy~., data=train, family=binomial)
+
+# Model Summary
+summary(model_3)
+
+# Confusion Matrix
+print_confusion_matrix(model_3, test, test$Occupancy)
+
+# Accuracy Rates
+print_accuracy_rates(model_3, test, test$Occupancy)
+```
+
+\pagebreak
+
+### 5.e Compare models by drawing ROC Curves and calculating AUROC values
+#### ROC curves
+```{r load ROCR, message=FALSE}
+library(ROCR)
+```
+```{r ROC Curves, fig.width=6, fig.height=5.2}
+model_formulas = c('Occupancy~Temperature','Occupancy~Humidity','Occupancy~.')
+
+get_ROC_Curve <- function(model, test_data, test_actual){
+  probs = predict(model,newdata=test_data,type='response')
+  preds = prediction(probs,test_actual)
+  perf = performance(preds, measure="tpr", x.measure="fpr")
+  return(perf)
+}
+
+plot(0,xlab = "False Positive Rate", ylab = "True Positive Rate",
+     main = "ROC curves",  ylim = 0:1, xlim = 0:1, type = "l")
+
+plot(get_ROC_Curve(model_1, test, test$Occupancy),lwd=3,col="red",add=TRUE)
+plot(get_ROC_Curve(model_2, test, test$Occupancy),lwd=3,col="green",add=TRUE)
+plot(get_ROC_Curve(model_3, test, test$Occupancy),lwd=3,col="blue",add=TRUE)
+
+lines(0:1,0:1,lty=2)
+
+legend("bottomright", model_formulas, col=c('red','green','blue'), lty=rep(1,3), lwd=rep(3,3))
+```
+
+\pagebreak
+
+#### Calculate Areas under the ROC curves
+```{r AUROC values}
+get_AUROC_Value <- function(model, test_data, test_actual){
+  probs = predict(model,newdata=test_data,type='response')
+  preds = prediction(probs,test_actual)
+  perf = performance(preds, measure="auc")@y.values[[1]]
+  return(perf)
+}
+kable(data.frame(AUROC = c(get_AUROC_Value(model_1, test, test$Occupancy),
+                           get_AUROC_Value(model_2, test, test$Occupancy),
+                           get_AUROC_Value(model_3, test, test$Occupancy)),
+                 row.names = model_formulas))
+
+```
+
+
+The model which regresses Occupancy upon all of the predictors has the highest AUROC and seems to be closer to the top left corner of the ROC plot. This is the better model for most thresholds.
+
+\pagebreak
+
+# 6. Resampling methods
+
+## 6.a) prediction of better model
+The quartic (degree 4) model is likely to fit the test data better. 
+
+The quartic model is more flexible than is necessary to describe the underlying relationship, so it will suffer from some variance and have a tendency to overfit; however, this is mostly mitigated by the high sample size and the inclusion of all the actual factors upon which y depends, i.e. all the terms up to and including cubic. 
+
+The quadratic model is less flexible than necessary to describe the actual relationship so is susceptible to bias. Given the large sample size I would expect the MSE to be lower for the quartic model than the quadratic model in the majority of cases. That said, where the cubic coefficient makes the cubic term very small compared to the irreducible error then the quartic model may be marginally worse than the quadratic model.
+
+## 6.b) Generate the simulated data
+```{r Generate the simulated data}
+set.seed(235)
+x = 12 + rnorm(400)
+y = 1 - x + 4*x^2 - 5*x^3 + rnorm(400)
+plot(x,y,col='dark green',main='Simulated Data',pch=1)
+```
+
+The relationship between X and Y is close to linear, but not exactly. The irreducible error term generated by `rnom(400)` will have a standard deviation of 1, which is very small compared to the underlying value of y, so is not particularly visible on the chart.
+
+## 6.c) Compute LOOCV and 10-fol CV errors
+
+```{r set seed and build data frame}
+library(boot)
+set.seed(34)
+d = data.frame(X=x,Y=y)
+```
+
+\pagebreak
+
+### 6.c.i) Build Quadratic Model 
+
+```{r Build Quadratic Model}
+lm.m.p2 = glm(Y~poly(X,2),data=d)
+summary(lm.m.p2)
+#The LOOCV for quadratic model is
+cv.glm(d,lm.m.p2)$delta[1]
+#The 10-fold CV for quadratic model is
+cv.glm(d,lm.m.p2,K=10)$delta[1]
+```
+
+\pagebreak
+
+### 6.c.i) Build Quartic Model
+```{r Build Quartic Model}
+lm.m.p4 = glm(Y~poly(X,4),data=d)
+summary(lm.m.p4)
+#The LOOCV for quartic model is
+cv.glm(d,lm.m.p4)$delta[1]
+#The 10-fold CV for quartic model is
+cv.glm(d,lm.m.p4,K=10)$delta[1]
+```
+
+\pagebreak
+
+### 6.d) Compute LOOCV and 10-fold CV errors with different seed
+```{r different seed}
+set.seed(68)
+#The LOOCV for quadratic model is
+cv.glm(d,lm.m.p2)$delta[1]
+
+#The LOOCV for quartic model is
+cv.glm(d,lm.m.p4)$delta[1]
+
+#The 10-fold CV for quadratic model is
+cv.glm(d,lm.m.p2,K=10)$delta[1]
+
+#The 10-fold CV for quartic model is
+cv.glm(d,lm.m.p4,K=10)$delta[1]
+```
+
+The LOOCV results are the same for 6.c as they are for 6.d, whereas for 10-fold CV the results differ slightly between 6.c and 6.d. LOOCV does not include any random sampling - the result is a deterministic function of the input - so it makes sense that they would not differ. K-fold CV requires random sampling so the result is dependent upon the random samples selected, which is dependent upon the seed. As the seeds differ, so will the samples chosen, and so will the cross-validation errors calculated therefrom.
+
+
+### 6.e) Which model had smallest error?
+The quartic model had significantly smaller CV error than the quadratic model. This agrees with the expectation in 6.a) - the quartic model covers all factors relevant to the actual population.
+
+### 6.f) Comment on the coefficient estimates
+The t values are quite large and the p values very small for the terms up to and including cubic, suggesting it is very likely there is a cubic relationship. The coefficient for the quartic term is close to zero with a very small t value and a large p value suggesting very little significance can be derived from including the quartic term.
+
+\pagebreak
+
+### 6.g) Fit a cubic model and compare
+```{r cubic model and compare}
+set.seed(34)
+
+#cubic model
+lm.m.p3 = glm(Y~poly(X,3),data=d)
+summary(lm.m.p3)
+
+#The LOOCV for the cubic model is
+cv.glm(d,lm.m.p3)$delta[1]
+
+#The 10-fold CV for cubic model is
+cv.glm(d,lm.m.p3,K=10)$delta[1]
+```
+
+The LOOCV and 10-fold CV error are very close to those for the quartic model discussed above, but slightly smaller. Given that the true underlying relationship is actually cubic it makes sense that they would be slightly smaller - the quartic term in the best model above provided opportunity for overfitting. The actual noise in the generated data is generated from a standard gaussian distribution, so has a variance of 1, which is very close to the MSE we see here, suggesting we have a good fit.
