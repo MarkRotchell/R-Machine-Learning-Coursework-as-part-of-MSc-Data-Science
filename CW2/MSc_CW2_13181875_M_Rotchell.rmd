@@ -1,0 +1,555 @@
+---
+title: "BDA Coursework 2"
+subtitle: 'MSc Data Science'
+author: 'Mark Rotchell, 13181875'
+header-includes:
+   - \usepackage{tikz}
+   - \usetikzlibrary{automata, positioning, shapes.multipart}
+   - \usepackage{xcolor}
+output: pdf_document
+geometry: margin=2cm
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+```
+
+# 1. Bayesian Networks and Naïve Bayes Classifiers
+
+## 1.a) Conditional Probability Tables
+
+\begin{tabular}{|c|c|}
+\hline
+Buy Computer = No & Buy Computer = Yes \\
+\hline
+\hline
+$16/30$ = 0.533333\ldots & $14/30$ = 0.466666\ldots \\
+\hline
+\end{tabular}
+
+
+\begin{tabular}{|c||c|c|}
+\hline
+ & Student = False & Student = True \\
+\hline
+\hline
+Buy Computer = No & $5/16$ = 0.3125 & $11/16$ = 0.6875 \\
+Buy Computer = Yes & $7/14$ = 0.5 & $7/14$ = 0.5 \\
+\hline
+\end{tabular}
+
+
+\begin{tabular}{|c||c|c|}
+\hline
+ & Income = High & Income = Low \\
+\hline
+\hline
+Buy Computer = No & $7/16$ = 0.4375 & $9/16$ = 0.5625 \\
+Buy Computer = Yes & $5/14$ = 0.357143\ldots & $9/14$ = 0.642857\ldots \\
+\hline
+\end{tabular}
+
+
+
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & & & Credit Rating = Excellent & Credit Rating = Fair \\
+\hline
+\hline
+Income = High & Student = False & Buy Computer = No & $2/3$ = 0.6666\ldots & $1/3$ = 0.3333\ldots \\
+Income = High & Student = False & Buy Computer = Yes & $2/3$ = 0.6666\ldots & $1/3$ = 0.3333\ldots \\
+Income = High & Student = True & Buy Computer = No & $2/4$ = 0.5 & $2/4$ = 0.5 \\
+Income = High & Student = True & Buy Computer = Yes & $1/2$ = 0.5 &$1/2$ =  0.5 \\
+Income = Low & Student = False & Buy Computer = No & $1/2$ = 0.5 & $1/2$ = 0.5 \\
+Income = Low & Student = False & Buy Computer = Yes & $2/4$ = 0.5 & $2/4$ = 0.5 \\
+Income = Low & Student = True & Buy Computer = No & $2/7$ = 0.285714\ldots & $5/7$ = 0.714286\ldots \\
+Income = Low & Student = True & Buy Computer = Yes & $2/5$ = 0.4 & $3/5$ = 0.6 \\
+\hline
+\end{tabular}
+
+## 1.a) Bayesian Network Classifier prediction
+
+\begin{center}
+\begin{tikzpicture}%
+  [>=stealth,
+   shorten >=1pt,
+   node distance=3cm,
+   auto,
+   on grid,
+   every text node part/.style={align=center}
+  ]
+\node[state] (Income)                  {Income};
+\node[state] (Student) [right=of Income] {Student};
+\node[state] (Credit) [below=of Income] {Credit \\ Rating};
+\node[state] (Computer) [below=of Student] {Buys \\ Computer};
+
+\path[->]
+%   FROM       BEND/LOOP           POSITION OF LABEL   LABEL   TO
+   (Student) edge [line width=2pt] (Credit)
+   (Income) edge [line width=2pt] (Credit)
+   (Computer) edge [dashed, red, line width=2pt] (Credit)
+   (Computer) edge [dashed, red, line width=2pt] (Student)
+   (Computer) edge [dashed, red, line width=2pt] (Income)
+   ;
+\end{tikzpicture}
+\end{center}
+
+From above graph we can deduce that:
+\begin{align*}
+    P(Buys\ Computer | Income, Student, Credit\ Rating) \propto & P(Credit\ Rating | Income, Student, Buys\ Computer) \\ 
+  \cdot & P(Income | Buys\ Computer) \cdot P(Student | Buys\ Computer) \\
+  \cdot & P(Buys\ Computer)
+\end{align*}
+
+### For testing Instance_31:
+\begin{align*}
+ &  P(Buys\ Computer = \mathrm{Yes} | Income = \mathrm{Low}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Excellent}) \\
+  \propto & P(Credit\ Rating = \mathrm{Excellent}| Income =  \mathrm{Low}, Student = \mathrm{False}, Buys\ Computer = \mathrm{Yes} ) \\
+  \cdot & P(Income = \mathrm{Low}| Buys\ Computer = \mathrm{Yes})\\
+  \cdot & P(Student = \mathrm{False} | Buys\ Computer = \mathrm{Yes}) \\ 
+  \cdot & P(Buys\ Computer = \mathrm{Yes}) \\
+  = & \dfrac{1}{2} \cdot \dfrac{9}{14} \cdot \dfrac{1}{2} \cdot \dfrac{7}{15} = \dfrac{3}{40} = 0.075
+\end{align*}
+\begin{align*}
+  & P(Buys\ Computer = \mathrm{No} | Income = \mathrm{Low}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Excellent}) \\
+  \propto & P(Credit\ Rating = \mathrm{Excellent}| Income =  \mathrm{Low}, Student = \mathrm{False}, Buys\ Computer = \mathrm{No} ) \\
+  \cdot & P(Income = \mathrm{Low}| Buys\ Computer = \mathrm{No})\\
+  \cdot & P(Student = \mathrm{False} | Buys\ Computer = \mathrm{No}) \\ 
+  \cdot & P(Buys\ Computer = \mathrm{No}) \\
+  = & \dfrac{1}{2} \cdot \dfrac{9}{16} \cdot \dfrac{5}{16} \cdot \dfrac{8}{15} = \dfrac{3}{64} = 0.046875
+\end{align*}
+
+The predicted class label is **Yes** for testing Instance_31 because
+\begin{align*}
+P(Buys\ Computer = \mathrm{Yes} | Instance\_31) & > P(Buys\ Computer = \mathrm{No} | Instance\_31) \\
+\dfrac{3}{40} > \dfrac{3}{64} \qquad & \Leftrightarrow \qquad 0.075 > 0.046875
+\end{align*}
+
+### For testing Instance_32:
+
+Following the same logic as above\ldots
+\begin{align*}
+ P(Buys\ Computer = \mathrm{Yes} | Income = \mathrm{High}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Fair})
+  \propto & \dfrac{1}{3} \cdot \dfrac{5}{14} \cdot \dfrac{1}{2} \cdot \dfrac{7}{15} = \dfrac{1}{36} = 0.02777\ldots \\
+  P(Buys\ Computer = \mathrm{No} | Income = \mathrm{High}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Fair})
+  \propto & \dfrac{1}{3} \cdot \dfrac{7}{16} \cdot \dfrac{5}{16} \cdot \dfrac{8}{15} = \dfrac{7}{288} = 0.02430555\ldots  
+\end{align*}
+
+The predicted class label is **Yes** for testing Instance_32 because
+\begin{align*}
+P(Buys\ Computer = \mathrm{Yes} | Instance\_32) & > P(Buys\ Computer = \mathrm{No} | Instance\_32) \\
+\dfrac{1}{36} > \dfrac{7}{288} \qquad & \Leftrightarrow \qquad 0.02777\ldots > 0.02430555\ldots
+\end{align*}
+
+
+## 1.c) Conditional Probability Tables assuming independent predictors
+
+\begin{tabular}{|c|c|}
+\hline
+Buy Computer = No & Buy Computer = Yes \\
+\hline
+\hline
+$16/30$ = 0.533333\ldots & $14/30$ = 0.466666\ldots \\
+\hline
+\end{tabular}
+
+
+\begin{tabular}{|c||c|c|}
+\hline
+ & Student = False & Student = True \\
+\hline
+\hline
+Buy Computer = No & $5/16$ = 0.3125 & $11/16$ = 0.6875 \\
+Buy Computer = Yes & $7/14$ = 0.5 & $7/14$ = 0.5 \\
+\hline
+\end{tabular}
+
+
+\begin{tabular}{|c||c|c|}
+\hline
+ & Income = High & Income = Low \\
+\hline
+\hline
+Buy Computer = No & $7/16$ = 0.4375 & $9/16$ = 0.5625 \\
+Buy Computer = Yes & $5/14$ = 0.357143\ldots & $9/14$ = 0.642857\ldots \\
+\hline
+\end{tabular}
+
+\begin{tabular}{|c||c|c|}
+\hline
+ & Credit Rating = Excellent & Credit Rating = Fair \\
+\hline
+\hline
+Buy Computer = No & $7/16$ = 0.4375 & $9/16$ = 0.5625 \\
+Buy Computer = Yes & $7/14$ = 0.5 & $7/14$ = 0.5 \\
+\hline
+\end{tabular}
+
+## 1.d) Naïve Bayes classifier predictions
+
+Under the naïve Bayes model
+\begin{align*}
+   P(Buys\ Computer | Income, Student, Credit\ Rating) \propto & P(Credit\ Rating | Buys\ Computer) \\
+   \cdot & P(Income | Buys\ Computer) \cdot P(Student | Buys\ Computer)  \\
+   \cdot & P(Buys\ Computer)
+\end{align*}
+
+### For testing Instance_31:
+\begin{align*}
+ P(Buys\ Computer = \mathrm{Yes} | Income = \mathrm{Low}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Excellent})
+  \propto & \dfrac{1}{2} \cdot \dfrac{9}{14} \cdot \dfrac{1}{2} \cdot \dfrac{7}{15} = \dfrac{3}{40} = 0.075 \\
+  P(Buys\ Computer = \mathrm{No} | Income = \mathrm{Low}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Excellent})
+  \propto & \dfrac{7}{16} \cdot \dfrac{9}{16} \cdot \dfrac{5}{16} \cdot \dfrac{8}{15}\\
+  = & \dfrac{21}{512} = 0.041015625 
+\end{align*}
+
+The predicted class label is **Yes** for testing Instance_31 because
+\begin{align*}
+P(Buys\ Computer = \mathrm{Yes} | Instance\_31) & > P(Buys\ Computer = \mathrm{No} | Instance\_31) \\
+\dfrac{3}{40} > \dfrac{21}{512} \qquad & \Leftrightarrow \qquad 0.075 >0.041015625
+\end{align*}
+
+### For testing Instance_32:
+\begin{align*}
+ P(Buys\ Computer = \mathrm{Yes} | Income = \mathrm{High}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Fair})
+  \propto & \dfrac{1}{2} \cdot \dfrac{5}{14} \cdot \dfrac{1}{2} \cdot \dfrac{7}{15} = \dfrac{1}{24} = 0.041666\ldots \\
+  P(Buys\ Computer = \mathrm{No} | Income = \mathrm{High}, Student = \mathrm{False}, Credit\ Rating = \mathrm{Fair})
+  \propto & \dfrac{9}{16} \cdot \dfrac{7}{16} \cdot \dfrac{5}{16} \cdot \dfrac{8}{15} \\
+  = & \dfrac{21}{512} = 0.041015625\ldots  
+\end{align*}
+
+The predicted class label is **Yes** for testing Instance_32 because
+\begin{align*}
+P(Buys\ Computer = \mathrm{Yes} | Instance\_32) & > P(Buys\ Computer = \mathrm{No} | Instance\_32) \\
+\dfrac{1}{24} > \dfrac{21}{512} \qquad & \Leftrightarrow \qquad 0.041666\ldots > 0.041015625\ldots
+\end{align*}
+
+\pagebreak
+
+# 2. Decision Trees and Random Forests
+
+## 2.a) Train a tree on occupancy data
+
+### Load Data
+```{r Load Occupancy Data}
+train = read.csv('RoomOccupancy_Training.txt')
+test = read.csv('RoomOccupancy_Testing.txt')
+train$Occupancy = as.factor(train$Occupancy)
+test$Occupancy = as.factor(test$Occupancy)
+```
+
+### Build a tree model
+```{r Build a tree}
+library(tree)
+tree_model <- tree(Occupancy~.,train)
+summary(tree_model)
+```
+### Evaluation Predictive performance
+```{r Evaluation Predictive performance of tree}
+tree_predictions = predict(tree_model,newdata=test,type='class')
+mean(tree_predictions != test$Occupancy)
+```
+
+The error rate obtained on the testing data is 20.3%
+ 
+\pagebreak
+
+## 2.b) Output and Analyse the tree.
+
+```{r plot tree,fig.width=8, fig.height=7}
+plot(tree_model, col='dark green')
+text(tree_model, pretty=0, cex=0.8, font=2,col='red')
+title(main='Decision Tree for Occupancy', 
+      ylab='Branch lent proportional to decrease in impurity',
+      xlab='Leaf shows resulting category predicted')
+```
+
+\pagebreak
+
+## 2.c) Random Forest classifier
+Choosing `mtry` to be 2 $\approx  \sqrt{5}$
+
+```{r random forest, message=FALSE}
+library(randomForest)
+```
+```{r random forest model}
+set.seed(550)
+#Build randomForest model, selecting 2 predictors for each tree
+forest = randomForest(y=train$Occupancy, x=train[,-6],ytest=test$Occupancy, xtest=test[,-6],
+                      mtry=2, ntree=200, importance=TRUE)
+
+#Test Error Rate
+forest$test$err.rate[200,1][[1]]
+
+```
+## 2.d) Output and analyse the feature importance
+
+```{r feature importance, fig.width=8, fig.height=5}
+kable(importance(forest))
+varImpPlot(forest,main='Variable Importance of different factors in the random forest classifier')
+```
+
+\pagebreak
+
+# 3. Support Vector Machines
+
+## 3.a) Load wine data, find optimal parameters for and train a linear-kernel SVM
+
+### Load and prepare data
+```{r SVM load data}
+train = read.csv('WineQuality_training.txt')
+test = read.csv('WineQuality_testing.txt')
+train$quality = as.factor(train$quality)
+test$quality = as.factor(test$quality)
+```
+
+### Find Optimal cost for linear kernel
+```{r}
+library(e1071)
+set.seed(100)
+tuner_linear = tune(svm,quality~.,data=train,kernel='linear',ranges=list(cost=c(0.01, 0.1, 1, 5, 10)))
+summary(tuner_linear)
+```
+best cost value is 1
+
+\pagebreak
+
+## 3.b) Train svm classifier using linear kernel and report predictive performance
+
+### Train a linear-kernel SVM classifier
+```{r}
+linear_svm_model = svm(quality~., data=train, kernel='linear', cost=1, probability=TRUE)
+summary(linear_svm_model)
+```
+
+### Make predictions on the testing data set and report performance
+```{r}
+linear_predictions = predict(linear_svm_model, newdata=test)
+
+kable(table(linear_predictions, test$quality))
+
+mean(linear_predictions != test$quality)
+```
+The error rate on the testing data is 31.75%
+
+\pagebreak
+
+## 3.c) Find optimal hyper-parameters for RBF kernel
+```{r}
+set.seed(100)
+tuner_radial = tune(svm,quality~.,data=train,kernel='radial',
+                    ranges=list(cost=c(0.01, 0.1, 1, 5, 10),
+                                gamma = c(0.01, 0.05, 0.1, 0.5, 1)))
+summary(tuner_radial)
+```
+
+\pagebreak
+ 
+## 3.d) Train svm classifier using RBF kernel and report predictive performance
+
+### Train a radial-kernel SVM classifier
+```{r}
+radial_svm_model = svm(quality~., data=train, kernel='radial', 
+                       cost=5, gamma=0.5, probability=TRUE)
+summary(radial_svm_model)
+```
+
+### Make predictions on the testing data set and report performance
+```{r}
+radial_predictions = predict(radial_svm_model, newdata=test)
+
+kable(table(radial_predictions, test$quality))
+
+mean(radial_predictions != test$quality)
+```
+
+\pagebreak
+## 3.e) ROC Curve analysis
+
+```{r}
+library(ROCR)
+# set up some helper functions to reduce code duplication
+get_pred <- function(model){
+  probs = predict(model, test, probability = TRUE, type='response')
+  prob_Good = attributes(probs)[['probabilities']][,'Good']
+  pred = prediction(prob_Good, test$quality)
+  return(pred)
+}
+
+get_ROC_Curve <- function(model){
+  perf = performance(get_pred(model), measure="tpr", x.measure="fpr")
+  return(perf)
+}
+
+get_AUROC_Value <- function(model){
+  perf = performance(get_pred(model), measure="auc")@y.values[[1]]
+  return(perf)
+}
+```
+```{r ROC Curves, fig.width=7, fig.height=7}
+#Plot ROC Curves
+plot(0,xlab = "False Positive Rate", ylab = "True Positive Rate",
+     main = "ROC curves",  ylim = 0:1, xlim = 0:1, type = "l")
+
+plot(get_ROC_Curve(linear_svm_model), lwd=3, col="red", add=TRUE)
+plot(get_ROC_Curve(radial_svm_model), lwd=3, col="green", add=TRUE)
+
+legend("bottomright", c('Linear kernel','RBF Kernel'), col=c('red','green'), lty=c(1,1), lwd=c(3,3))
+
+#Area under the linear svm model
+get_AUROC_Value(linear_svm_model)
+
+#Area under the ROC curve for the radial svm model
+get_AUROC_Value(radial_svm_model)
+
+```
+
+\pagebreak
+
+# 4. Hierarchical clustering
+
+## 4.a) Hierarchical clustering complete linkage and Euclidean distance
+
+```{r Hierarchical clustering complete linkage and Euclidian distance, fig.width=7, fig.height=6}
+hc = hclust(dist(USArrests),method='complete')
+par(mar=c(0,3,3,2))
+plot(hc, main='Complete Linkage, Euclidean Distance, Unscaled', 
+     xlab='',sub='',ylab="", hang=-1, cex=0.6)
+
+```
+
+## 4.b) Cut dendrogram into three clusters. Which states in each cluster?
+
+```{r Hierarchical clustering cut, fig.width=7, fig.height=5}
+par(mar=c(0,3,3,2))
+plot(hc, main='Complete Linkage, Euclidean Distance, Unscaled', 
+     xlab='',sub='',ylab="", hang=-1, cex=0.6)
+abline(h=mean(rev(hc$height)[2:3]),lty=2,col=2)
+```
+
+### States that belong to each cluster
+
+```{r}
+ct = cutree(hc,3)
+# First Cluster
+rownames(USArrests)[ct==1]
+# Second Cluster
+rownames(USArrests)[ct==2]
+# Third Cluster
+rownames(USArrests)[ct==3]
+```
+
+\pagebreak
+
+## 4.c) Hierarchical clustering with complete linkage and Euclidean distance after scaling
+```{r Hierarchical clustering scaled, fig.width=7, fig.height=5}
+hc.scaled = hclust(dist(scale(USArrests)),method='complete')
+
+par(mar=c(0,3,3,2))
+plot(hc.scaled, main='Complete Linkage, Euclidean Distance, Scaled', 
+     xlab='',sub='',ylab="", hang=-1, cex=0.6)
+abline(h=mean(rev(hc.scaled$height)[2:3]),lty=2,col=2)
+
+ct.scaled = cutree(hc.scaled,3)
+#First Cluster
+rownames(USArrests)[ct.scaled==1]
+#Second Cluster
+rownames(USArrests)[ct.scaled==2]
+#Third Cluster
+rownames(USArrests)[ct.scaled==3]
+```
+
+## 4.d) Effect of scaling
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+
+\pagebreak
+
+# 5. PCA and K-Means Clustering
+
+## 5.a Generate a simulated data set
+
+```{r fig.width=7, fig.height=7}
+set.seed(102)
+randoms = matrix(rnorm(60*50),nrow=60,ncol=50)
+categories = rep(1:3,each=20)
+offsets = matrix(rnorm(3*50),3,50)[categories,]
+dat = data.frame(randoms+offsets)
+
+#pairs plot of some example dimensions to show shifted means
+pairs(dat[c(1,5,6,12,19,34,40,45)],col=categories,cex=0.8,pch=20)
+```
+
+## 5.b Perform PCA analysis, check classes appear separated
+
+```{r fig.width=7, fig.height=6}
+pr <- prcomp(dat, scale=FALSE)
+
+par(mar=c(4,4,5.5,4))
+plot(pr$x[,1], pr$x[,2], col=categories+1, pch=20,
+     xlab = "PC1", ylab = "PC2", xlim=c(-6.5,7), ylim=c(-6.5,7))
+
+arrows(rep(0,50), rep(0,50), pr$rotation[,1]*15, pr$rotation[,2]*15, col='grey',length = 0.1)
+
+text((pr$rotation[,1]+0.02*sign(pr$rotation[,1]))*15, (pr$rotation[,2]+0.02*sign(pr$rotation[,2]))*15,
+      labels=rownames(pr$rotation), cex=0.75)
+
+for (s in 3:4){axis(side=s,at=seq(-6,6,by=3),labels=seq(-0.4,0.4,by=0.2))}
+
+mtext("Biplot of the First two Principal Components", side = 3, line = 4, cex = 1.2)
+mtext("their loading vectors, and observations colour coded according to subgroup", 
+      side = 3, line = 3, cex = 1.0)
+```
+
+\pagebreak
+
+## 5.c K-means clustering on raw data with 3 clusters
+
+```{r}
+set.seed(102)
+km = kmeans(dat,centers=3,nstart=100)
+table(actual=categories,predicted=km$cluster)
+```
+
+K-means clustering successfully separates the clusters into three distinct classes.
+
+## 5.d K-means clustering on raw data with 2 clusters
+
+```{r}
+set.seed(102)
+km = kmeans(dat,centers=2,nstart=100)
+table(actual=categories,predicted=km$cluster)
+```
+
+Two of the actual clusters have been grouped together into one predicted cluster. 
+
+## 5.e K-means clustering on raw data with 4 clusters
+
+```{r}
+set.seed(102)
+km = kmeans(dat,centers=4,nstart=100)
+table(actual=categories,predicted=km$cluster)
+```
+
+Two clusters have retained their integrity, however, one cluster has been split into two. 
+
+## 5.f K-means clustering on principal components
+
+```{r}
+set.seed(102)
+km_pc=kmeans(pr$x[,1:2],3,100)
+table(actual=categories,predicted=km_pc$cluster)
+```
+
+The clusters are clearly distinguishable in the biplots above, so it not surprising that kmeans easily distinguishes between them by looking only at two dimenstions.
+
+## 5.g K-means clustering on scaled raw data
+
+```{r}
+set.seed(102)
+km_sc=kmeans(scale(dat),centers=3,nstart=100)
+table(actual=categories,predicted=km_sc$cluster)
+```
+Results are similar to those in 5.c, different only by the arbitrary class label allocated to the predicted cluster.
